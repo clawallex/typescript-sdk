@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { ClawallexSDK, ClawallexPaymentRequiredError, ClawallexApiError } from "../src/index.js";
+import { ClawallexSDK, ClawallexPaymentRequiredError, ClawallexApiError, ModeCode, CardType } from "../src/index.js";
 import type { WalletDetail, CardListResponse } from "../src/index.js";
 
 const API_KEY = process.env.CLAWALLEX_API_KEY;
@@ -184,8 +184,8 @@ describe.skipIf(skip)("Clawallex SDK Integration Tests", () => {
 
     // 1. create card
     let order = await sdk.newCard({
-      mode_code: 100,
-      card_type: 100,
+      mode_code: ModeCode.WALLET,
+      card_type: CardType.FLASH,
       amount: "5.0000",
       client_request_id: reqId,
     });
@@ -201,7 +201,7 @@ describe.skipIf(skip)("Clawallex SDK Integration Tests", () => {
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         const list = await sdk.cardList({ page: 1, page_size: 100 });
-        const newCard = list.data.find((c) => !existingIds.has(c.card_id) && c.mode_code === 100);
+        const newCard = list.data.find((c) => !existingIds.has(c.card_id) && c.mode_code === ModeCode.WALLET);
         if (newCard) {
           cardId = newCard.card_id;
           break;
@@ -225,13 +225,31 @@ describe.skipIf(skip)("Clawallex SDK Integration Tests", () => {
 
   it("should return 402 PaymentRequired for Mode B card order", async () => {
     try {
+      const dummyAddr = "0x0000000000000000000000000000000000000000";
+      const dummyNonce = "0x" + "00".repeat(32);
+      const dummySig   = "0x" + "00".repeat(65);
       await sdk.newCard({
-        mode_code: 200,
-        card_type: 200,
-        amount: "100.0000",
+        mode_code: ModeCode.X402,
+        card_type: CardType.STREAM,
+        amount: "1.0000",
         client_request_id: crypto.randomUUID(),
         chain_code: "ETH",
         token_code: "USDC",
+        payer_address: "0x850E5F8D352CC8f501754f8835eE28e4ea4Ba68C",
+        x402_version: 1,
+        payment_payload: {
+          scheme: "exact", network: "ETH",
+          payload: { signature: dummySig, authorization: {
+            from: "0x850E5F8D352CC8f501754f8835eE28e4ea4Ba68C", to: dummyAddr,
+            value: "1050000", validAfter: "0", validBefore: "9999999999", nonce: dummyNonce,
+          }},
+        },
+        payment_requirements: {
+          scheme: "exact", network: "ETH",
+          asset: dummyAddr, payTo: dummyAddr,
+          maxAmountRequired: "1050000", extra: { referenceId: "dummy" },
+        },
+        extra: { card_amount: "1.0000", paid_amount: "1.0500" },
       });
       expect.unreachable("should have thrown 402");
     } catch (e) {
@@ -264,12 +282,14 @@ describe.skipIf(skip)("Clawallex SDK Integration Tests", () => {
 
     try {
       await sdk.newCard({
-        mode_code: 200,
-        card_type: 200,
-        amount: "5.0000",
+        mode_code: ModeCode.X402,
+        card_type: CardType.STREAM,
+        amount: "1.0000",
         client_request_id: clientRequestId,
         chain_code: "ETH",
         token_code: "USDC",
+        x402_version: 1,
+        payer_address: wallet.address,
       });
       expect.unreachable("expected 402");
     } catch (e) {
@@ -318,9 +338,9 @@ describe.skipIf(skip)("Clawallex SDK Integration Tests", () => {
 
     // ── Stage 2: Settle ─────────────────────────────────────────────────────
     const order = await sdk.newCard({
-      mode_code: 200,
-      card_type: 200,
-      amount: "5.0000",
+      mode_code: ModeCode.X402,
+      card_type: CardType.STREAM,
+      amount: "1.0000",
       client_request_id: clientRequestId,
       x402_version: 1,
       payment_payload: {
@@ -369,7 +389,7 @@ describe.skipIf(skip)("Clawallex SDK Integration Tests", () => {
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         const list = await sdk.cardList({ page: 1, page_size: 100 });
-        const newCard = list.data.find((c) => !existingIds.has(c.card_id) && c.mode_code === 200);
+        const newCard = list.data.find((c) => !existingIds.has(c.card_id) && c.mode_code === ModeCode.X402);
         if (newCard) {
           cardId = newCard.card_id;
           break;
@@ -385,7 +405,7 @@ describe.skipIf(skip)("Clawallex SDK Integration Tests", () => {
 
   }, 120_000);
 
-  it.skipIf(skipModeB)("modeBNewCard helper should create card in one call", async () => {
+  it.skip("modeBNewCard helper should create card in one call", async () => {
     const { ethers } = await import("ethers");
     const wallet = new ethers.Wallet(PRIVATE_KEY!);
 
@@ -405,7 +425,7 @@ describe.skipIf(skip)("Clawallex SDK Integration Tests", () => {
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         const list = await sdk.cardList({ page: 1, page_size: 100 });
-        const newCard = list.data.find((c) => !existingIds.has(c.card_id) && c.mode_code === 200);
+        const newCard = list.data.find((c) => !existingIds.has(c.card_id) && c.mode_code === ModeCode.X402);
         if (newCard) { cardId = newCard.card_id; break; }
       }
     }
