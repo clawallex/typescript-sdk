@@ -23,6 +23,7 @@ import type {
 } from "./types.js";
 
 export { ClawallexApiError, ClawallexPaymentRequiredError } from "./client.js";
+export { ModeCode, CardType } from "./types.js";
 export type {
   X402Authorization,
   X402PaymentPayload,

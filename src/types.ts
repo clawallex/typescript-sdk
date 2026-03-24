@@ -1,3 +1,21 @@
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/** Funding source for card creation. */
+export const ModeCode = {
+  /** Mode A: deduct from wallet balance. */
+  WALLET: 100,
+  /** Mode B: on-chain x402 USDC payment. */
+  X402: 200,
+} as const
+
+/** Card lifecycle. */
+export const CardType = {
+  /** One-time use, auto-destroyed after a single transaction. */
+  FLASH: 100,
+  /** Reloadable, suitable for recurring payments. */
+  STREAM: 200,
+} as const
+
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
 export interface WhoamiResponse {
