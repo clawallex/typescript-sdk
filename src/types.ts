@@ -153,8 +153,12 @@ export interface CreateCardOrderParams {
   client_request_id: string;
   fee_amount?: string;
   issuer_card_currency?: string;
-  issuer_spending_controls?: string;
-  allow_3ds_transactions?: string;
+  /** Per-transaction spending limit, e.g. `"100.0000"` */
+  tx_limit?: string;
+  /** MCC whitelist, comma-separated, e.g. `"5411,5812"`. Mutually exclusive with `blocked_mcc`. */
+  allowed_mcc?: string;
+  /** MCC blacklist, comma-separated, e.g. `"7995"`. Mutually exclusive with `allowed_mcc`. */
+  blocked_mcc?: string;
   /** Mode B Stage 1: chain code, e.g. `"ETH"` / `"BASE"` */
   chain_code?: string;
   /** Mode B Stage 1: token code, e.g. `"USDC"` */
@@ -245,6 +249,12 @@ export interface CardDetailsResponse {
   encrypted_sensitive_data: EncryptedSensitiveData;
   expiry_month: number;
   expiry_year: number;
+  /** Per-transaction spending limit */
+  tx_limit: string;
+  /** MCC whitelist, comma-separated */
+  allowed_mcc: string;
+  /** MCC blacklist, comma-separated */
+  blocked_mcc: string;
   card_currency: string;
   available_balance: string;
   first_name: string;
@@ -256,6 +266,33 @@ export interface CardDetailsResponse {
   updated_at: string;
 }
 
+
+export interface BatchCardBalanceRequest {
+  card_ids: string[];
+}
+
+export interface BatchCardBalanceResponse {
+  data: CardBalanceResponse[];
+}
+
+// ─── Update Card ─────────────────────────────────────────────────────────────
+
+export interface UpdateCardParams {
+  client_request_id: string;
+  /** Per-transaction spending limit, e.g. `"100.0000"` */
+  tx_limit?: string;
+  /** MCC whitelist, comma-separated. Mutually exclusive with `blocked_mcc`. */
+  allowed_mcc?: string;
+  /** MCC blacklist, comma-separated. Mutually exclusive with `allowed_mcc`. */
+  blocked_mcc?: string;
+}
+
+export interface UpdateCardResponse {
+  card_id: string;
+  card_order_id: string;
+  /** `"success"` or `"pending_external"` */
+  status: string;
+}
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
 
@@ -271,15 +308,25 @@ export interface Transaction {
   card_id: string;
   card_tx_id: string;
   issuer_tx_id: string;
+  issuer_ori_tx_id: string;
   action_type: number;
   tx_type: number;
+  process_status: string;
   amount: string;
   fee_amount: string;
+  fee_currency: string;
+  billing_amount: string;
+  billing_currency: string;
+  transaction_amount: string;
+  transaction_currency: string;
   status: number;
+  card_fund_applied: number;
   is_in_progress: number;
   merchant_name: string;
   mcc: string;
   decline_reason: string;
+  description: string;
+  issuer_card_available_balance: string;
   occurred_at: string;
   settled_at: string | null;
   webhook_event_id: string;

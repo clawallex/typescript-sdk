@@ -75,7 +75,9 @@ const asset = await client.x402AssetAddress({ token_code: "USDC", chain_code: "B
 const order = await client.newCard(params);
 const { data } = await client.cardList({ page: 1, page_size: 20 });
 const balance = await client.cardBalance("card-id");
+const balances = await client.batchCardBalances(["card-id-1", "card-id-2"]);
 const details = await client.cardDetails("card-id");
+const updated = await client.updateCard("card-id", { client_request_id: "uuid", tx_limit: "200.0000" });
 
 // Transactions
 const txs = await client.transactionList({ card_id: "card-id", page: 1, page_size: 20 });
@@ -83,6 +85,30 @@ const txs = await client.transactionList({ card_id: "card-id", page: 1, page_siz
 // Refill
 const refill = await client.refillCard("card-id", params);
 ```
+
+### Batch Card Balances
+
+Query multiple card balances in a single request:
+
+```typescript
+const { data } = await client.batchCardBalances(["card-id-1", "card-id-2"]);
+// data: CardBalanceResponse[] — same order as input card_ids
+```
+
+### Update Card Controls
+
+Update a card's spending controls (transaction limit, MCC filters):
+
+```typescript
+const result = await client.updateCard("card-id", {
+  client_request_id: crypto.randomUUID(),
+  tx_limit: "200.0000",          // per-transaction limit
+  allowed_mcc: "5411,5812",      // MCC whitelist (OR blocked_mcc, not both)
+});
+// result.status: "success" | "pending_external"
+```
+
+> At least one update field must be provided. `allowed_mcc` and `blocked_mcc` are **mutually exclusive** — set one or the other, not both. The server creates an update order and calls the issuer. If the issuer responds asynchronously, `status` will be `"pending_external"` and the final result arrives via webhook.
 
 ## Mode A — Wallet Funded Card
 
@@ -98,6 +124,9 @@ const order = await client.newCard({
   card_type: CardType.FLASH,   // FLASH (single-use) or STREAM (rechargeable)
   amount: "50.0000",           // card face value in USD
   client_request_id: crypto.randomUUID(),  // idempotency key
+  // Optional spending controls:
+  tx_limit: "100.0000",        // per-transaction limit
+  allowed_mcc: "5411,5812",    // MCC whitelist (OR blocked_mcc, not both)
 });
 
 // order.card_order_id — always present
@@ -336,7 +365,19 @@ const refill = await client.refillCard(cardId, {
 
 ## Card Details — Decrypting PAN/CVV
 
-`cardDetails` returns encrypted sensitive data. The server encrypts with a key derived from your `api_secret`.
+The `cardDetails` response includes card controls and cardholder info alongside encrypted PAN/CVV:
+
+| Field | Description |
+|-------|-------------|
+| `tx_limit` | Per-transaction spending limit |
+| `allowed_mcc` | MCC whitelist (comma-separated; mutually exclusive with `blocked_mcc`) |
+| `blocked_mcc` | MCC blacklist (comma-separated; mutually exclusive with `allowed_mcc`) |
+| `first_name` | Cardholder first name |
+| `last_name` | Cardholder last name |
+| `delivery_address` | Billing address (JSON string or plain text) |
+| `encrypted_sensitive_data` | Encrypted PAN/CVV (see below) |
+
+The server encrypts sensitive data with a key derived from your `api_secret`.
 
 ```typescript
 import { createHash, createHmac, createDecipheriv } from "node:crypto";

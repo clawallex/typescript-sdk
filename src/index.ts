@@ -15,7 +15,11 @@ import type {
   ListCardsParams,
   CardListResponse,
   CardBalanceResponse,
+  BatchCardBalanceRequest,
+  BatchCardBalanceResponse,
   CardDetailsResponse,
+  UpdateCardParams,
+  UpdateCardResponse,
   ListTransactionsParams,
   TransactionListResponse,
   RefillCardParams,
@@ -43,8 +47,12 @@ export type {
   Card,
   CardListResponse,
   CardBalanceResponse,
+  BatchCardBalanceRequest,
+  BatchCardBalanceResponse,
   EncryptedSensitiveData,
   CardDetailsResponse,
+  UpdateCardParams,
+  UpdateCardResponse,
   ListTransactionsParams,
   Transaction,
   TransactionListResponse,
@@ -135,6 +143,14 @@ export class ClawallexSDK {
 
   cardDetails(cardId: string): Promise<CardDetailsResponse> {
     return this.http.get<CardDetailsResponse>(`/payment/cards/${cardId}/details`);
+  }
+
+  batchCardBalances(cardIds: string[]): Promise<BatchCardBalanceResponse> {
+    return this.http.post<BatchCardBalanceResponse>("/payment/cards/balances", { card_ids: cardIds });
+  }
+
+  updateCard(cardId: string, params: UpdateCardParams): Promise<UpdateCardResponse> {
+    return this.http.post<UpdateCardResponse>(`/payment/cards/${cardId}/update`, params);
   }
 
   // ── Transactions ─────────────────────────────────────────────────────────────
