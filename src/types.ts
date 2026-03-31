@@ -172,6 +172,11 @@ export interface CreateCardOrderParams {
   payment_requirements?: X402PaymentRequirements;
   /** Mode B Stage 2: `{ card_amount: "amount", paid_amount: "payable_amount" }` */
   extra?: Record<string, string>;
+  /**
+   * Card TTL in seconds. Flash cards only; omit for the default 24-hour expiry.
+   * Sets issuer `expiry_at = now + ttl`.
+   */
+  ttl?: number;
   payer_address?: string;
 }
 
